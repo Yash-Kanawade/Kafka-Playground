@@ -1,0 +1,17 @@
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+<script>
+    var socket = new SockJS("http://localhost:8080/ws");
+    var stompClient = Stomp.over(socket);
+
+    stompClient.connect({}, function () {
+        console.log("Connected!");
+
+        stompClient.subscribe("/topic/page-views", function (message) {
+            console.log("LIVE DATA: ", JSON.parse(message.body));
+        });
+    });
+</script>
+
+<h2>Check console for live updates</h2>
