@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Tracking Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .pages {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .page-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .page-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .page-card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-1 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .btn-2 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .btn-3 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4caf50;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease;
+            z-index: 1000;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .dashboard-link {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: white;
+            color: #667eea;
+            padding: 15px 30px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            font-size: 1.1em;
+        }
+
+        .dashboard-link:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🎯 Real-Time Analytics Demo</h1>
+        <p>Click buttons to generate events and watch the dashboard update in real-time!</p>
+    </div>
+
+    <div class="pages">
+        <div class="page-card">
+            <h2>📱 Home Page</h2>
+            <div class="buttons">
+                <button class="btn btn-1" onclick="trackClick('home-button-1', 'Home')">
+                    Button 1 - Learn More
+                </button>
+                <button class="btn btn-2" onclick="trackClick('home-button-2', 'Home')">
+                    Button 2 - Get Started
+                </button>
+                <button class="btn btn-3" onclick="trackClick('home-button-3', 'Home')">
+                    Button 3 - Contact Us
+                </button>
+            </div>
+        </div>
+
+        <div class="page-card">
+            <h2>🛍️ Products Page</h2>
+            <div class="buttons">
+                <button class="btn btn-1" onclick="trackClick('products-button-1', 'Products')">
+                    Button 1 - View All
+                </button>
+                <button class="btn btn-2" onclick="trackClick('products-button-2', 'Products')">
+                    Button 2 - Categories
+                </button>
+                <button class="btn btn-3" onclick="trackClick('products-button-3', 'Products')">
+                    Button 3 - Best Sellers
+                </button>
+            </div>
+        </div>
+
+        <div class="page-card">
+            <h2>ℹ️ About Page</h2>
+            <div class="buttons">
+                <button class="btn btn-1" onclick="trackClick('about-button-1', 'About')">
+                    Button 1 - Our Story
+                </button>
+                <button class="btn btn-2" onclick="trackClick('about-button-2', 'About')">
+                    Button 2 - Team
+                </button>
+                <button class="btn btn-3" onclick="trackClick('about-button-3', 'About')">
+                    Button 3 - Careers
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<a href="dashboard.html" class="dashboard-link">
+    📊 View Dashboard →
+</a>
+
+<script>
+    const API_URL = 'http://localhost:8080/api/events/click';
+
+    async function trackClick(buttonId, pageName) {
+        const event = {
+            buttonId: buttonId,
+            pageName: pageName,
+            timestamp: Date.now()
+        };
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(event)
+            });
+
+            if (response.ok) {
+                showNotification('Event tracked successfully! 🎉');
+            } else {
+                showNotification('Error tracking event ❌', false);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showNotification('Error connecting to server ❌', false);
+        }
+    }
+
+    function showNotification(message, success = true) {
+        const notification = document.createElement('div');
+        notification.className = 'notification';
+        notification.style.background = success ? '#4caf50' : '#f44336';
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.style.animation = 'slideIn 0.3s ease reverse';
+            setTimeout(() => notification.remove(), 300);
+        }, 2000);
+    }
+</script>
+</body>
+</html>

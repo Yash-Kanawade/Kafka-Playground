@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Analytics Monitor</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0e1a;
+            color: #00d9ff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            height: 100vh;
+            padding: 15px;
+            max-width: 100%;
+        }
+
+        .header {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 8px;
+            background: linear-gradient(135deg, #1a1f3a 0%, #0d1117 100%);
+            border: 2px solid #00d9ff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 217, 255, 0.5), inset 0 0 20px rgba(0, 217, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+            height: 80px;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 217, 255, 0.1) 0%, transparent 70%);
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px #00d9ff, 0 0 20px #00d9ff;
+            position: relative;
+            z-index: 1;
+            margin-bottom: 5px;
+        }
+
+        .status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            display: inline-block;
+            font-weight: bold;
+            font-size: 0.9em;
+            position: relative;
+            z-index: 1;
+            border: 2px solid;
+        }
+
+        .connected {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: #10b981;
+            color: #10b981;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+        }
+
+        .disconnected {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+            color: #ef4444;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+        }
+
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow: hidden;
+        }
+
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow: hidden;
+        }
+
+        .metrics {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #0f1729 0%, #1a1f3a 100%);
+            border: 2px solid #00d9ff;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            box-shadow: 0 0 15px rgba(0, 217, 255, 0.3);
+            position: relative;
+        }
+
+        .metric-card p {
+            font-size: 0.75em;
+            color: #00d9ff;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #ffaa00;
+            text-shadow: 0 0 10px #ffaa00;
+        }
+
+        .chart-card {
+            background: linear-gradient(135deg, #0f1729 0%, #1a1f3a 100%);
+            border: 2px solid #00d9ff;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+            height: calc(100% - 95px);
+            position: relative;
+        }
+
+        .chart-card h3 {
+            font-size: 1em;
+            margin-bottom: 10px;
+            color: #ffaa00;
+            text-shadow: 0 0 10px #ffaa00;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .chart-wrapper {
+            height: calc(100% - 35px);
+            position: relative;
+        }
+
+        .ranking-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            height: calc(100% - 95px);
+        }
+
+        .ranking-card {
+            background: linear-gradient(135deg, #0f1729 0%, #1a1f3a 100%);
+            border: 2px solid #00d9ff;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .ranking-card h3 {
+            font-size: 1em;
+            margin-bottom: 10px;
+            color: #ffaa00;
+            text-shadow: 0 0 10px #ffaa00;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .ranking-item {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0, 217, 255, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 8px;
+            border-left: 3px solid #00d9ff;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+        }
+
+        .ranking-item:hover {
+            background: rgba(0, 217, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+        .ranking-item span:first-child {
+            color: #00d9ff;
+        }
+
+        .ranking-item span:last-child {
+            color: #ffaa00;
+            font-weight: bold;
+            text-shadow: 0 0 5px #ffaa00;
+        }
+
+        .arc-reactor {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 25px;
+            height: 25px;
+            border: 2px solid #00d9ff;
+            border-radius: 50%;
+            box-shadow: 0 0 15px #00d9ff, inset 0 0 15px #00d9ff;
+            animation: reactor-pulse 2s ease-in-out infinite;
+            z-index: 10;
+        }
+
+        @keyframes reactor-pulse {
+            0%, 100% { box-shadow: 0 0 15px #00d9ff, inset 0 0 15px #00d9ff; }
+            50% { box-shadow: 0 0 30px #00d9ff, inset 0 0 30px #00d9ff; }
+        }
+
+        .back-link {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #00d9ff 0%, #0099cc 100%);
+            color: #0a0e1a;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: bold;
+            text-decoration: none;
+            border: 2px solid #00d9ff;
+            box-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            font-size: 0.9em;
+        }
+
+        .back-link:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(0, 217, 255, 0.8);
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0a0e1a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #00d9ff;
+            border-radius: 3px;
+            box-shadow: 0 0 10px #00d9ff;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>⚡ Analytics Monitor ⚡</h1>
+        <div id="connection-status" class="status disconnected">● Connecting...</div>
+    </div>
+
+    <div class="left-panel">
+        <div class="metrics">
+            <div class="metric-card">
+                <div class="arc-reactor"></div>
+                <p>Last 10 Seconds</p>
+                <div class="metric-value" id="metric-10s">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="arc-reactor"></div>
+                <p>Last 30 Seconds</p>
+                <div class="metric-value" id="metric-30s">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="arc-reactor"></div>
+                <p>Last 1 Minute</p>
+                <div class="metric-value" id="metric-60s">0</div>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="arc-reactor"></div>
+            <h3>📈 Events Over Time</h3>
+            <div class="chart-wrapper">
+                <canvas id="timeSeriesChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="right-panel">
+        <div class="ranking-section">
+            <div class="ranking-card">
+                <div class="arc-reactor"></div>
+                <h3>🏆 Top Pages</h3>
+                <div id="top-pages">No data yet</div>
+            </div>
+
+            <div class="ranking-card">
+                <div class="arc-reactor"></div>
+                <h3>🎯 Top Buttons</h3>
+                <div id="top-buttons">No data yet</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<a href="tracking-page.html" class="back-link">← Back to Tracking</a>
+
+<script>
+    const WS_URL = "http://localhost:8080/ws-analytics";
+
+    let stompClient;
+    let chart;
+    const chartData = { labels: [], d10: [], d30: [], d60: [] };
+
+    function connectWebSocket() {
+        const socket = new SockJS(WS_URL);
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, () => {
+            updateStatus(true);
+            stompClient.subscribe("/topic/analytics", (message) => {
+                updateDashboard(JSON.parse(message.body));
+            });
+        }, () => {
+            updateStatus(false);
+            setTimeout(connectWebSocket, 3000);
+        });
+    }
+
+    function updateStatus(connected) {
+        const el = document.getElementById("connection-status");
+        el.className = connected ? "status connected" : "status disconnected";
+        el.textContent = connected ? "● Connected" : "● Disconnected";
+    }
+
+    function setupChart() {
+        const ctx = document.getElementById("timeSeriesChart").getContext("2d");
+
+        chart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: chartData.labels,
+                datasets: [
+                    {
+                        label: "10s",
+                        data: chartData.d10,
+                        borderColor: "#00d9ff",
+                        backgroundColor: "rgba(0, 217, 255, 0.1)",
+                        tension: 0.4,
+                        borderWidth: 2,
+                        fill: true
+                    },
+                    {
+                        label: "30s",
+                        data: chartData.d30,
+                        borderColor: "#ffaa00",
+                        backgroundColor: "rgba(255, 170, 0, 0.1)",
+                        tension: 0.4,
+                        borderWidth: 2,
+                        fill: true
+                    },
+                    {
+                        label: "60s",
+                        data: chartData.d60,
+                        borderColor: "#ff0064",
+                        backgroundColor: "rgba(255, 0, 100, 0.1)",
+                        tension: 0.4,
+                        borderWidth: 2,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#00d9ff',
+                            font: { size: 11 }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: { color: '#00d9ff', font: { size: 10 } },
+                        grid: { color: 'rgba(0, 217, 255, 0.1)' }
+                    },
+                    x: {
+                        ticks: { color: '#00d9ff', font: { size: 10 } },
+                        grid: { color: 'rgba(0, 217, 255, 0.1)' }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateDashboard(s) {
+        document.getElementById("metric-10s").textContent = s.last10Seconds;
+        document.getElementById("metric-30s").textContent = s.last30Seconds;
+        document.getElementById("metric-60s").textContent = s.last1Minute;
+
+        const time = new Date().toLocaleTimeString();
+        chartData.labels.push(time);
+        chartData.d10.push(s.last10Seconds ?? 0);
+        chartData.d30.push(s.last30Seconds ?? 0);
+        chartData.d60.push(s.last1Minute ?? 0);
+
+        if (chartData.labels.length > 20) {
+            chartData.labels.shift();
+            chartData.d10.shift();
+            chartData.d30.shift();
+            chartData.d60.shift();
+        }
+
+        chart.update('none');
+        updateRanking("top-pages", s.topPages);
+        updateRanking("top-buttons", s.topButtons);
+    }
+
+    function updateRanking(id, data) {
+        const container = document.getElementById(id);
+
+        // Handle both array and object formats
+        let items = [];
+
+        if (Array.isArray(data)) {
+            items = data;
+        } else if (typeof data === 'object' && data !== null) {
+            // Convert Map<String, Double> to array of {name, score}
+            items = Object.entries(data).map(([name, score]) => ({
+                name: name,
+                score: Math.round(score)
+            }));
+        }
+
+        if (items.length === 0) {
+            container.innerHTML = "<p style='color: #00d9ff; font-size: 0.9em;'>No data yet</p>";
+            return;
+        }
+
+        container.innerHTML = "";
+
+        items.forEach(item => {
+            const div = document.createElement("div");
+            div.className = "ranking-item";
+            const name = item.name || item.key || 'Unknown';
+            const value = item.score ?? item.value ?? item.count ?? 0;
+            div.innerHTML = `<span>${name}</span><span>${value}</span>`;
+            container.appendChild(div);
+        });
+    }
+
+    window.onload = () => {
+        setupChart();
+        connectWebSocket();
+    };
+</script>
+
+</body>
+</html>
